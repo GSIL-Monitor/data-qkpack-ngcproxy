@@ -1,0 +1,83 @@
+user root;
+worker_processes auto;
+worker_cpu_affinity auto;
+
+worker_rlimit_nofile 204800;
+
+error_log   logs/error.log;	
+
+worker_rlimit_core 1024000m;
+working_directory logs/;
+
+pid 		logs/nginx_proxy.pid;
+events {
+	use epoll;
+	reuse_port on;
+	accept_mutex off;
+	worker_connections 204800;
+}
+
+processes {
+	process qkpack_manager {
+		listen 8010;
+	}
+}
+
+http {
+
+	log_format  main  '$time_local'
+                        '       $request_uri'
+                        '       $status'
+                        '       $bytes_sent'
+                        '       $request_time'
+                        '       $upstream_response_time'
+                        '       $host'
+                        '       $remote_addr'
+                        '       $server_addr'
+                        '       $upstream_addr'
+                        '       $http_referer'
+                        '       $http_user_agent'
+                        '       $http_X_Forwarded_For'
+                        '       $http_connection'
+                        '       $sent_http_connection'
+                        '       $sent_http_keep_alive';
+						
+	#access_log  logs/access.log main;
+	access_log off;
+
+	
+	sendfile        on;
+	tcp_nodelay     on;
+	tcp_nopush  	on;
+	
+	server_tokens off;
+	reset_timedout_connection on;
+	proxy_ignore_client_abort on;
+
+	keepalive_timeout 600;
+	keepalive_requests 1000000;
+
+	client_max_body_size 300m;
+	client_header_buffer_size 2048k;
+	large_client_header_buffers 4 2048k;
+	client_body_buffer_size 2048k;
+	
+	
+	proxy_connect_timeout 30;
+	proxy_read_timeout 30;
+	proxy_send_timeout 30;
+
+	proxy_buffer_size     64k;
+	proxy_buffers         4 64k;
+	proxy_busy_buffers_size 128k;
+	proxy_temp_file_write_size 128k;
+	
+	qkplugin_conf_path name=qk_pack so_path=/opt/data-qkpack-ngproxy/lib/libqkpack.so so_conf=/opt/data-qkpack-ngproxy/conf/qkpack.conf;
+
+	include /opt/data-qkpack-ngproxy/conf/upstream.conf;
+	
+	include /opt/data-qkpack-ngproxy/conf/nginx_proxy.conf;
+	
+	include /opt/data-qkpack-ngproxy/conf/nginx_qkpack.conf;
+}
+
